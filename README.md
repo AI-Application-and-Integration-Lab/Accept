@@ -26,6 +26,10 @@ Prompt Tuning has been a popular Parameter-Efficient Fine-Tuning method attribut
 
 ## 🚀 Usage
 
+- Train
+```
+```
+
 ## 🙏 Acknowledgements
 This code is based on DEPT, and we sincerely thank the authors for their great work.
 
