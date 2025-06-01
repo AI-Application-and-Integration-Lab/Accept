@@ -4,18 +4,18 @@ MAX_STEPS=300000
 PREFIX_LENGTH=60
 R=30
 for TASK_NAME in qnli; do # cola mrpc mnli qnli qqp rte sst2 stsb
-  for LORA_LR in 1e-3 5e-3; do #  1e-4 5e-4 1e-3 5e-3
+  for SCAP_LR in 1e-3 5e-3; do #  1e-4 5e-4 1e-3 5e-3
       for lr in 3e-1 4e-1 5e-1; do #  3e-1 4e-1 5e-1
         for i in "32 20"; do 
             set -- $i # Convert the "tuple" into the param args $1 $2...
                 CUDA_VISIBLE_DEVICES=0 python train.py \
                     --peft_type PROMPT_TUNING_LORA \
-                    --pq_prompt True \
-                    --pq_lora False \
-                    --lora_embedding_lr ${LORA_LR} \
+                    --scpp True \
+                    --scap False \
+                    --added_embedding_lr ${SCAP_LR} \
                     --learning_rate ${lr} \
-                    --sub_dim_prompt $1 \
-                    --codebook_size_prompt $2 \
+                    --sub_dim_scpp $1 \
+                    --codebook_size_scpp $2 \
                     --prefix_length ${PREFIX_LENGTH} \
                     --r ${R} \
                     --task_name ${TASK_NAME} \

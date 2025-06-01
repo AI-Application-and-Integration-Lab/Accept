@@ -165,11 +165,11 @@ class ModelArguments:
     peft_model_id: Optional[str] = field(
         default=None, metadata={"help": "Path to pretrained model using PEFT."}
     )
-    pretrain_prompt_ckpt: Optional[str] = field(
-        default=None, metadata={"help": "Path to pretrained pq-prompt."}
+    pretrain_scpp_ckpt: Optional[str] = field(
+        default=None, metadata={"help": "Path to pretrained scpp."}
     )
-    pretrain_lora_ckpt: Optional[str] = field(
-        default=None, metadata={"help": "Path to pretrained pq-lora."}
+    pretrain_scap_ckpt: Optional[str] = field(
+        default=None, metadata={"help": "Path to pretrained scap."}
     )
     config_name: Optional[str] = field(
         default=None, metadata={"help": "Pretrained config name or path if not the same as model_name"}
@@ -227,17 +227,17 @@ class ModelArguments:
         default="PROMPT_TUNING_LORA",
         metadata={"help": "PROMPT_TUNING or PROMPT_TUNING_LORA."}
     )
-    sub_dim_prompt: Optional[int] = field(default=16, metadata={"help": "The length of the codewords of prompts."})
-    sub_dim_lora: Optional[int] = field(default=32, metadata={"help": "The length of the codewords of lora."})
-    codebook_size_prompt: Optional[int] = field(default=12, metadata={"help": "Number of codewords in each codebook of prompts."})
-    codebook_size_lora: Optional[int] = field(default=4, metadata={"help": "Number of codewords in each codebook of lora."})
-    pq_prompt: bool = field(
+    sub_dim_scpp: Optional[int] = field(default=16, metadata={"help": "The length of the codewords of prepended prompts."})
+    sub_dim_scap: Optional[int] = field(default=32, metadata={"help": "The length of the codewords of added prompts."})
+    codebook_size_scpp: Optional[int] = field(default=12, metadata={"help": "Number of codewords in each codebook of prepended prompts."})
+    codebook_size_scap: Optional[int] = field(default=4, metadata={"help": "Number of codewords in each codebook of added prompts."})
+    scpp: bool = field(
         default=True,
-        metadata={"help": "Whether to apply product quantization to prompts"},
+        metadata={"help": "Whether to apply product quantization to prepended prompts"},
     )
-    pq_lora: bool = field(
+    scap: bool = field(
         default=False,
-        metadata={"help": "Whether to apply product quantization to lora embeddings"},
+        metadata={"help": "Whether to apply product quantization to added embeddings"},
     )
 
 
@@ -256,7 +256,7 @@ class DynamicTrainingArguments(Seq2SeqTrainingArguments):
     )
     generation_num_beams: Optional[int] = field(
         default=1, metadata={"help": "Number of beams to use for evaluation."})
-    lora_embedding_lr: float = field(default=None, metadata={"help": "The initial learning rate for lora embedding."})
+    added_embedding_lr: float = field(default=None, metadata={"help": "The initial learning rate for added embedding."})
     save_lora_embeddings: bool = field(
         default=True,
         metadata={"help": "Whether to save the lora embeddings."}
@@ -541,16 +541,16 @@ def main():
                 num_virtual_tokens=model_args.prefix_length,
                 num_transformer_submodules=model_args.num_transformer_submodules,
                 prompt_tuning_init_text=model_args.prompt_tuning_init_text,
-                pretrain_prompt_ckpt=model_args.pretrain_prompt_ckpt,
-                pretrain_lora_ckpt=model_args.pretrain_lora_ckpt,
+                pretrain_scpp_ckpt=model_args.pretrain_scpp_ckpt,
+                pretrain_scap_ckpt=model_args.pretrain_scap_ckpt,
                 tokenizer_name_or_path=model_args.model_name_or_path,
                 r=model_args.r,
-                sub_dim_prompt=model_args.sub_dim_prompt,
-                sub_dim_lora=model_args.sub_dim_lora,
-                codebook_size_prompt=model_args.codebook_size_prompt,
-                codebook_size_lora=model_args.codebook_size_lora,
-                pq_prompt=model_args.pq_prompt,
-                pq_lora=model_args.pq_lora,
+                sub_dim_scpp=model_args.sub_dim_scpp,
+                sub_dim_scap=model_args.sub_dim_scap,
+                codebook_size_scpp=model_args.codebook_size_scpp,
+                codebook_size_scap=model_args.codebook_size_scap,
+                scpp=model_args.scpp,
+                scap=model_args.scap,
                 token_dim=model_args.hidden_size,
                 max_length=data_args.max_seq_length,
                 save_lora_embeddings=training_args.save_lora_embeddings,
@@ -639,8 +639,8 @@ def main():
     eval_metrics = AutoTask.get(data_args.task_name, data_args.dataset_config_name).metric
     post_processor = AutoPostProcessor.get(data_args.task_name, tokenizer, data_args.ignore_pad_token_for_loss)
 
-    if model_args.peft_type == "PROMPT_TUNING_LORA" and training_args.lora_embedding_lr is not None:
-        logger.info(f"\n\Set up learning rate for lora embedding: {training_args.lora_embedding_lr}\n\n")
+    if model_args.peft_type == "PROMPT_TUNING_LORA" and training_args.added_embedding_lr is not None:
+        logger.info(f"\n\Set up learning rate for lora embedding: {training_args.added_embedding_lr}\n\n")
         lora_embedding = []
         non_lora_embedding = []
         # name_list = [name for name, _ in model.named_parameters()]
@@ -655,7 +655,7 @@ def main():
 
         optimizer = AdamW([
             {'params': non_lora_embedding},
-            {'params': lora_embedding, 'lr': training_args.lora_embedding_lr},
+            {'params': lora_embedding, 'lr': training_args.added_embedding_lr},
         ], lr=training_args.learning_rate,)
         num_training_steps = len(train_dataset) * training_args.num_train_epochs // (training_args.gradient_accumulation_steps * training_args.per_device_train_batch_size) if training_args.max_steps is None else training_args.max_steps
         scheduler = get_linear_schedule_with_warmup(

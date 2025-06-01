@@ -266,7 +266,7 @@ class PeftModel(PushToHubMixin, torch.nn.Module):
         peft_config = self.active_peft_config
         prompt_encoder = self.prompt_encoder[adapter_name]
         if peft_config.peft_type == PeftType.PROMPT_TUNING_LORA:
-            if not prompt_encoder.pq_lora:
+            if not prompt_encoder.scap:
                 prompt_tokens = (
                     self.prompt_tokens[adapter_name].unsqueeze(0).expand(1, -1).to(prompt_encoder.lora_embedding_A.device)
                 )
@@ -290,7 +290,7 @@ class PeftModel(PushToHubMixin, torch.nn.Module):
         peft_config = self.active_peft_config
         prompt_encoder = self.prompt_encoder[self.active_adapter]
         if peft_config.peft_type == PeftType.PROMPT_TUNING_LORA:
-            if not prompt_encoder.pq_lora:
+            if not prompt_encoder.scap:
                 prompt_tokens = (
                     self.prompt_tokens[self.active_adapter]
                     .unsqueeze(0)
@@ -336,7 +336,7 @@ class PeftModel(PushToHubMixin, torch.nn.Module):
         else:
             if peft_config.inference_mode:
                 if peft_config.peft_type == PeftType.PROMPT_TUNING_LORA:
-                    if  prompt_encoder.pq_prompt:
+                    if  prompt_encoder.scpp:
                         # (40, 48, 8)
                         prompt_weight = prompt_encoder.prompt_weight.unsqueeze(-1)
                         # (40, 48, 16)
@@ -344,7 +344,7 @@ class PeftModel(PushToHubMixin, torch.nn.Module):
                         # (40, 768)
                         prompt_encoder.embedding = prompt_quantized.view(prompt_encoder.total_virtual_tokens, -1)
                         prompts = prompt_encoder.embedding.unsqueeze(0).repeat(batch_size, 1, 1)
-                    else: # not pq_prompt
+                    else: # not scpp
                         prompts = prompt_encoder.embedding.weight.repeat(batch_size, 1, 1)
                 else: 
                     prompts = prompt_encoder.embedding.weight.repeat(batch_size, 1, 1)
@@ -869,7 +869,7 @@ class PeftModelForCausalLM(PeftModel):
             if inputs_embeds is None:
                 batch_size = input_ids.shape[0]
                 inputs_embeds = self.word_embeddings(input_ids)
-                if self.prompt_encoder[self.active_adapter].pq_lora:
+                if self.prompt_encoder[self.active_adapter].scap:
                     lora_weight = self.prompt_encoder[self.active_adapter].lora_weight.unsqueeze(-1)
                     lora_quantized = torch.sum(lora_weight * 
                         torch.unsqueeze(self.prompt_encoder[self.active_adapter].codebook_lora, 0), dim=2)
@@ -984,7 +984,7 @@ class PeftModelForCausalLM(PeftModel):
                         batch_size = model_kwargs["input_ids"].shape[0]
                         inputs_embeds = self.word_embeddings(model_kwargs["input_ids"])
                         
-                        if self.prompt_encoder[self.active_adapter].pq_lora:
+                        if self.prompt_encoder[self.active_adapter].scap:
                             lora_weight = self.prompt_encoder[self.active_adapter].lora_weight.unsqueeze(-1)
                             lora_quantized = torch.sum(lora_weight * 
                                 torch.unsqueeze(self.prompt_encoder[self.active_adapter].codebook_lora, 0), dim=2)
@@ -1137,7 +1137,7 @@ class PeftModelForSeq2SeqLM(PeftModel):
             if inputs_embeds is None:
                 batch_size = input_ids.shape[0]
                 inputs_embeds = self.word_embeddings(input_ids)
-                if self.prompt_encoder[self.active_adapter].pq_lora:
+                if self.prompt_encoder[self.active_adapter].scap:
                     lora_weight = self.prompt_encoder[self.active_adapter].lora_weight.unsqueeze(-1)
                     lora_quantized = torch.sum(lora_weight * 
                         torch.unsqueeze(self.prompt_encoder[self.active_adapter].codebook_lora, 0), dim=2)
@@ -1262,7 +1262,7 @@ class PeftModelForSeq2SeqLM(PeftModel):
                     batch_size = input_ids.shape[0]
                     inputs_embeds = self.word_embeddings(input_ids)
 
-                    if self.prompt_encoder[self.active_adapter].pq_lora:
+                    if self.prompt_encoder[self.active_adapter].scap:
                         lora_weight = self.prompt_encoder[self.active_adapter].lora_weight.unsqueeze(-1)
                         lora_quantized = torch.sum(lora_weight * 
                             torch.unsqueeze(self.prompt_encoder[self.active_adapter].codebook_lora, 0), dim=2)

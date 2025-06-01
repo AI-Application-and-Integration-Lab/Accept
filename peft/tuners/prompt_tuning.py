@@ -56,10 +56,10 @@ class PromptTuningConfig(PromptLearningConfig):
         default=False, 
         metadata={"help": "How to initialize the PQPA tuning parameters"},
     )
-    pretrain_prompt_ckpt: Optional[str] = field(
+    pretrain_scpp_ckpt: Optional[str] = field(
         default=None, metadata={"help": "Path to pretrained prepended prompt."}
     )
-    pretrain_lora_ckpt: Optional[str] = field(
+    pretrain_scap_ckpt: Optional[str] = field(
         default=None, metadata={"help": "Path to pretrained added prompt."}
     )
     tokenizer_name_or_path: Optional[str] = field(
@@ -68,9 +68,9 @@ class PromptTuningConfig(PromptLearningConfig):
             "help": "The tokenizer to use for prompt tuning initialization. Only used if prompt_tuning_init is `TEXT`"
         },
     )
-    sub_dim_prompt: int = field(default=32, metadata={"help": "The length of the codewords of prompts."})
-    codebook_size_prompt: int = field(default=20, metadata={"help": "Number of codewords in each codebook of prompts."})
-    pq_prompt: bool = field(
+    sub_dim_scpp: int = field(default=32, metadata={"help": "The length of the codewords of prompts."})
+    codebook_size_scpp: int = field(default=20, metadata={"help": "Number of codewords in each codebook of prompts."})
+    scpp: bool = field(
         default=True,
         metadata={"help": "Whether to apply product quantization to prompts"},
     )
@@ -120,23 +120,23 @@ class PromptEmbedding(torch.nn.Module):
         super().__init__()
 
         total_virtual_tokens = config.num_virtual_tokens * config.num_transformer_submodules
-        self.num_codebooks_prompt = int(config.token_dim / config.sub_dim_prompt)
-        self.pq_prompt = config.pq_prompt
-        self.codebook_size_prompt = config.codebook_size_prompt
-        self.sub_dim_prompt = config.sub_dim_prompt
+        self.num_codebooks_prompt = int(config.token_dim / config.sub_dim_scpp)
+        self.scpp = config.scpp
+        self.codebook_size_scpp = config.codebook_size_scpp
+        self.sub_dim_scpp = config.sub_dim_scpp
 
         # added prompt in front of the input text
-        if not config.pq_prompt:    
+        if not config.scpp:    
             self.embedding = torch.nn.Embedding(total_virtual_tokens, config.token_dim, device="cuda")
         else:
             # (60, 24, 20)
             self.prompt_weight = nn.Parameter(torch.zeros(
-                total_virtual_tokens, self.num_codebooks_prompt, config.codebook_size_prompt).cuda())
+                total_virtual_tokens, self.num_codebooks_prompt, config.codebook_size_scpp).cuda())
             nn.init.kaiming_uniform_(self.prompt_weight.data, a=math.sqrt(5))
 
             # (24, 20, 32)
             self.codebook_prompt = nn.Parameter(torch.zeros(
-                self.num_codebooks_prompt, config.codebook_size_prompt, config.sub_dim_prompt).cuda())
+                self.num_codebooks_prompt, config.codebook_size_scpp, config.sub_dim_scpp).cuda())
             nn.init.kaiming_uniform_(self.codebook_prompt.data, a=math.sqrt(5))
 
         if config.prompt_tuning_init == PromptTuningInit.TEXT:
@@ -161,14 +161,14 @@ class PromptEmbedding(torch.nn.Module):
             import os
             from ..utils import WEIGHTS_NAME
 
-            pretrain_prompt_filename = os.path.join(config.pretrain_prompt_ckpt, WEIGHTS_NAME)
+            pretrain_prompt_filename = os.path.join(config.pretrain_scpp_ckpt, WEIGHTS_NAME)
             prompt_state_dict = torch.load(pretrain_prompt_filename, map_location=torch.device("cuda" if torch.cuda.is_available() else "cpu"))
             self.prompt_weight.data = prompt_state_dict['prompt_weight']
             self.codebook_prompt.data = prompt_state_dict['codebook_prompt']
 
     def forward(self, indices):
         # Just get embeddings
-        if self.pq_prompt:
+        if self.scpp:
             # (40, 48, 8)
             prompt_weight = self.prompt_weight.unsqueeze(-1)
             # (40, 48, 16)

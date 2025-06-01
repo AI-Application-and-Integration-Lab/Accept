@@ -62,7 +62,7 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
     elif isinstance(config, PromptLearningConfig):
         to_return = {}
         # store prompt
-        if not config.pq_prompt:
+        if not config.scpp:
             if config.inference_mode:
                 prompt_embeddings = model.prompt_encoder[adapter_name].embedding.weight
             else:
@@ -74,7 +74,7 @@ def get_peft_model_state_dict(model, state_dict=None, adapter_name="default"):
             to_return["codebook_prompt"] = model.prompt_encoder[adapter_name].codebook_prompt
         # store lora_embedding_A/B
         if config.peft_type == PeftType.PROMPT_TUNING_LORA and config.save_lora_embeddings:
-            if not config.pq_lora:
+            if not config.scap:
                 to_return.update({k: state_dict[k] for k in state_dict if k.split(".")[-1].startswith("lora_embedding_")})           
             else:
                 to_return.update({k: state_dict[k] for k in state_dict if "lora" in k.split(".")[-1]})  
@@ -138,7 +138,7 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
 
     load_result = model.load_state_dict(peft_model_state_dict, strict=False)
     if isinstance(config, PromptLearningConfig):
-        if not config.pq_prompt:
+        if not config.scpp:
             model.prompt_encoder[adapter_name].embedding.load_state_dict(
                 {"weight": peft_model_state_dict["prompt_embeddings"]}, strict=True
             )
@@ -148,7 +148,7 @@ def set_peft_model_state_dict(model, peft_model_state_dict, adapter_name="defaul
             model.prompt_encoder[adapter_name].codebook_prompt.data = peft_model_state_dict["codebook_prompt"]
 
         if config.peft_type == PeftType.PROMPT_TUNING_LORA and config.load_lora_embeddings:
-            if not config.pq_lora:
+            if not config.scap:
                 model.prompt_encoder[adapter_name].lora_embedding_A.data = peft_model_state_dict["prompt_encoder.lora_embedding_A"]
                 if config.load_lora_embedding_B:
                     model.prompt_encoder[adapter_name].lora_embedding_B.data = peft_model_state_dict["prompt_encoder.lora_embedding_B"]

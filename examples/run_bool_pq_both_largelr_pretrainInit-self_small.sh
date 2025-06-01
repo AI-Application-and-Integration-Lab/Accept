@@ -4,23 +4,23 @@ MAX_STEPS=30000
 PREFIX_LENGTH=40
 R=45
 for TASK_NAME in superglue-boolq; do # cola mrpc mnli qnli qqp rte sst2 stsb
-  for LORA_LR in 1e-4 5e-4 1e-3 5e-3; do #  1e-4 5e-4 1e-3 5e-3
+  for SCAP_LR in 1e-4 5e-4 1e-3 5e-3; do #  1e-4 5e-4 1e-3 5e-3
       for lr in 1 5 10; do #  3e-1 4e-1 5e-1
         for i in "32 17 256 30"; do # "8 7" "16 12" "32 20"
             set -- $i # Convert the "tuple" into the param args $1 $2...
                 CUDA_VISIBLE_DEVICES=0 python train.py \
-                    --pretrain_prompt_ckpt /path/to/prepended_prompt_ckpt \
-                    --pretrain_lora_ckpt /path/to/added_prompt_ckpt \
+                    --pretrain_scpp_ckpt /path/to/prepended_prompt_ckpt \
+                    --pretrain_scap_ckpt /path/to/added_prompt_ckpt \
                     --peft_type PROMPT_TUNING_LORA \
                     --pretrain_init True \
-                    --pq_prompt True \
-                    --pq_lora True \
-                    --lora_embedding_lr ${LORA_LR} \
+                    --scpp True \
+                    --scap True \
+                    --added_embedding_lr ${SCAP_LR} \
                     --learning_rate ${lr} \
-                    --sub_dim_prompt $1 \
-                    --codebook_size_prompt $2 \
-                    --sub_dim_lora $3 \
-                    --codebook_size_lora $4 \
+                    --sub_dim_scpp $1 \
+                    --codebook_size_scpp $2 \
+                    --sub_dim_scap $3 \
+                    --codebook_size_scap $4 \
                     --prefix_length ${PREFIX_LENGTH} \
                     --r ${R} \
                     --task_name ${TASK_NAME} \

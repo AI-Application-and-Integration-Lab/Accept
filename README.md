@@ -41,15 +41,15 @@ Prompt Tuning has been a popular Parameter-Efficient Fine-Tuning method attribut
       - `MODEL`: t5-small, t5-base, t5-large, t5-3B, meta-llama/Llama-2-7b-hf, etc.
       - `MAX_LENGTH`: max input sequence length (not including prepended prompt). Using 256 for GLUE/SuperGLUE, and 512 for QA dataset.
       - `PREFIX_LENGTH`: length of the prepended prompt (SCPP).
-      - `MAX_STEPS`: folling the setting of DePT - 30,000 for datasets with fewer than 100,000 samples, and 300,000 for those with more than 100,000 samples.
+      - `MAX_STEPS`: following the setting of DePT - 30,000 for datasets with fewer than 100,000 samples, and 300,000 for those with more than 100,000 samples.
       - `R`: the rank (compression dimension) of LoRA.
-      - `LORA_LR`/`lr`: learning rate for added prompt / learning rate for others.
-      - `pq-prompt`/`pq-lora`: boolean, using SCPP or SCAP. (To train the pure DePT, both will be false.)
-      - `sub_dim_prompt, codebook_size_prompt`: The number of codewords in each subspace and their sub-dimension. These should be calculated using formulas in paper to ensure that the number of           parameters on each side does not exceed the specified limits. For example, if PREFIX_LENGTH = 60, then the total number of codebook + weight parameters for the prepended prompt must not          exceed 60 × ${model_dim}, and for the added prompt, it must not exceed 40 × ${model_dim}.
+      - `added_embedding_lr`/`learning_rate`: learning rate for added prompt / learning rate for others.
+      - `scpp`/`scap`: boolean, using SCPP or SCAP. (To train the pure DePT, both will be false.)
+      - `sub_dim_scpp, codebook_size_scpp`: The number of codewords in each subspace and their sub-dimension. These should be calculated using formulas in paper to ensure that the number of           parameters on each side does not exceed the specified limits. For example, if PREFIX_LENGTH = 60, then the total number of codebook + weight parameters for the prepended prompt must not          exceed 60 × ${model_dim}, and for the added prompt, it must not exceed 40 × ${model_dim}.
       - `task_name`: name of the dataset. You can refer to the `README.md` of DePT.
   - To train the following settings:
     - Loading pretrained weights while training ACCEPT
-      - `pretrain_prompt_ckpt`, `pretrain_lora_ckpt`: the pretrained SCPP and SCAP ckpt.
+      - `pretrain_scpp_ckpt`, `pretrain_scap_ckpt`: the pretrained SCPP and SCAP ckpt.
       - `pretrain_init`: true 
     - Few-shot
       - `peft_model_id`: load pretrained model weight.
